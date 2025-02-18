@@ -15,3 +15,4 @@ preferences.yaml
 
 **/.envrc
 **/.direnv
+pkg/deej/config.yaml
