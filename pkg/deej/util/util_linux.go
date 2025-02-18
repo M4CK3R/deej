@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
@@ -61,5 +62,11 @@ func getCurrentWindowProcessNames() ([]string, error) {
 		processName = processName[:len(processName)-1]
 	}
 
-	return []string{string(processName)}, nil
+	// Process name for firefox returns as ".firefox-wrapped", but the session name is just "firefox"
+	// we return both the wrapped and unwrapped process name just in case
+	// Remove leading "." and everything after "-" from process name
+	unwrappedProcessName := strings.Split(string(processName), "-")[0]
+	unwrappedProcessName = strings.TrimPrefix(unwrappedProcessName, ".")
+
+	return []string{string(processName), unwrappedProcessName}, nil
 }
