@@ -3,13 +3,13 @@ package deej
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"strconv"
 
-	"github.com/omriharel/deej/pkg/deej/util"
 	"github.com/micmonay/keybd_event"
+	"github.com/omriharel/deej/pkg/deej/util"
 	"github.com/thoas/go-funk"
 	"go.uber.org/zap"
 )
@@ -45,7 +45,7 @@ const (
 	// this threshold constant assumes that re-acquiring all sessions is a kind of expensive operation,
 	// and needs to be limited in some manner. this value was previously user-configurable through a config
 	// key "process_refresh_frequency", but exposing this type of implementation detail seems wrong now
-	minTimeBetweenSessionRefreshes = time.Second * 5
+	minTimeBetweenSessionRefreshes = time.Second * 1
 
 	// determines whether the map should be refreshed when a slider moves.
 	// this is a bit greedy but allows us to ensure sessions are always re-acquired, which is
@@ -287,16 +287,15 @@ func (m *sessionMap) handleSliderMoveEvent(event SliderMoveEvent) {
 	}
 }
 
-
 func (m *sessionMap) handleButtonEvent(event ButtonEvent) {
 	if event.Value == 0 {
 		kb, err := keybd_event.NewKeyBonding()
-		
+
 		i, err := strconv.Atoi(m.deej.config.ButtonMapping[strconv.Itoa(event.ButtonID)][0])
 		kb.SetKeys(i)
-		m.logger.Debugw("Triggering button","keycodeint",i)
+		m.logger.Debugw("Triggering button", "keycodeint", i)
 		// m.logger.Debug(0xAD + 0xFFF)
-		err = kb.Launching() 
+		err = kb.Launching()
 		if err != nil {
 			panic(err)
 		}
@@ -345,7 +344,16 @@ func (m *sessionMap) applyTargetTransform(specialTargetName string) []string {
 	// get currently unmapped sessions
 	case specialTargetAllUnmapped:
 		targetKeys := make([]string, len(m.unmappedSessions))
+		currentWindowProcessNames, err := util.GetCurrentWindowProcessNames()
+		if err != nil {
+			currentWindowProcessNames = []string{}
+		}
+
+		// silently ignore errors here, as this is on deej's "hot path" (and it could just mean the user's running linux)
 		for sessionIdx, session := range m.unmappedSessions {
+			if funk.ContainsString(currentWindowProcessNames, session.Key()) {
+				continue
+			}
 			targetKeys[sessionIdx] = session.Key()
 		}
 
