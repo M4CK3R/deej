@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
@@ -51,22 +50,13 @@ func getCurrentWindowProcessNames() ([]string, error) {
 
 	pid := int(xgb.Get32(pidReply.Value))
 
-	// Read process name from /proc/{pid}/comm
-	processName, err := os.ReadFile(filepath.Join("/proc", fmt.Sprintf("%d", pid), "comm"))
+	// Read process name from /proc/{pid}/exe
+	path, err := os.Readlink(filepath.Join("/proc", fmt.Sprintf("%d", pid), "exe"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read process name: %w", err)
+		return nil, fmt.Errorf("failed to read process path: %w", err)
 	}
 
-	// Remove trailing newline from comm file
-	if len(processName) > 0 && processName[len(processName)-1] == '\n' {
-		processName = processName[:len(processName)-1]
-	}
+	processName := filepath.Base(path)
 
-	// Process name for firefox returns as ".firefox-wrapped", but the session name is just "firefox"
-	// we return both the wrapped and unwrapped process name just in case
-	// Remove leading "." and everything after "-" from process name
-	unwrappedProcessName := strings.Split(string(processName), "-")[0]
-	unwrappedProcessName = strings.TrimPrefix(unwrappedProcessName, ".")
-
-	return []string{string(processName), unwrappedProcessName}, nil
+	return []string{string(processName), processName}, nil
 }
