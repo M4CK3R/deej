@@ -5,6 +5,7 @@ pkgs.mkShell {
     go
     gtk3
     libayatana-indicator
+    libayatana-appindicator
     libindicator
   ];
 }
